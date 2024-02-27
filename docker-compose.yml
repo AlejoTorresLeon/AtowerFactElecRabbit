@@ -1,0 +1,19 @@
+version: '3.4'
+
+services:
+  atowerdocelectronico:
+    image: ${DOCKER_REGISTRY-}atowerdocelectronico
+    build:
+      context: AtowerDocElectronicos
+      dockerfile: Dockerfile
+
+  atowerenvionubex:
+    image: ${DOCKER_REGISTRY-}atowerenvionubex
+    build:
+      context: .
+      dockerfile: AtowerEnvioNubex/Dockerfile
+
+networks:
+  default:
+    external:
+        name: microservicenet

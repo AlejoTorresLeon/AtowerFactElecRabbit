@@ -9,7 +9,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RabbitMQEventBus", "RabbitM
 EndProject
 Project("{E53339B2-1760-4266-BCC7-CA923CBCF16C}") = "docker-compose", "docker-compose.dcproj", "{FBD21BA9-087C-491F-82B4-A06893BAD8CA}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AtowerEnvioNubex", "AtowerEnvioNubex\AtowerEnvioNubex.csproj", "{818E8250-B243-444B-82F1-C8E4862FE89D}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AtowerEnvioNubex", "AtowerEnvioNubex\AtowerEnvioNubex.csproj", "{818E8250-B243-444B-82F1-C8E4862FE89D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AtowerEnvioCorreos", "AtowerEnvioCorreos\AtowerEnvioCorreos.csproj", "{C13E1D06-4B96-47DB-B93A-A0894EB4A9A0}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -33,6 +35,10 @@ Global
 		{818E8250-B243-444B-82F1-C8E4862FE89D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{818E8250-B243-444B-82F1-C8E4862FE89D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{818E8250-B243-444B-82F1-C8E4862FE89D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C13E1D06-4B96-47DB-B93A-A0894EB4A9A0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C13E1D06-4B96-47DB-B93A-A0894EB4A9A0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C13E1D06-4B96-47DB-B93A-A0894EB4A9A0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C13E1D06-4B96-47DB-B93A-A0894EB4A9A0}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

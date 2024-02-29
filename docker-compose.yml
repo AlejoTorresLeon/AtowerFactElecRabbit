@@ -13,7 +13,14 @@ services:
       context: .
       dockerfile: AtowerEnvioNubex/Dockerfile
 
+  atowerenviocorreos:
+    image: ${DOCKER_REGISTRY-}atowerenviocorreos
+    build:
+      context: .
+      dockerfile: AtowerEnvioCorreos/Dockerfile
+
 networks:
   default:
     external:
         name: microservicenet
+

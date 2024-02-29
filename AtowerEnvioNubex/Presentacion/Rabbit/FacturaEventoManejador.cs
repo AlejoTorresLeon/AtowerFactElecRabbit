@@ -3,6 +3,7 @@ using AtowerEnvioNubex.Aplicacion.Interfaces;
 using RabbitMQEventBus.BusRabbit;
 using RabbitMQEventBus.Dtos;
 using RabbitMQEventBus.EventoQueue;
+using RabbitMQEventBus.Implement;
 using CargoDTO = AtowerEnvioNubex.Aplicacion.Dtos.CargoDTO;
 using ClienteDTO = AtowerEnvioNubex.Aplicacion.Dtos.ClienteDTO;
 using DescuentoGeneralDTO = AtowerEnvioNubex.Aplicacion.Dtos.DescuentoGeneralDTO;
@@ -17,11 +18,13 @@ namespace AtowerEnvioNubex.Presentacion.Rabbit
     {
         private readonly ILogger<FacturaEventoManejador> _logger;
         private readonly IEnvioFacturaNubexDian _envioFacturaNubexDian;
+        private readonly IRabbitEventBus _rabbitEventBus;
 
-        public FacturaEventoManejador(ILogger<FacturaEventoManejador> logger, IEnvioFacturaNubexDian envioFacturaNubexDian)
+        public FacturaEventoManejador(ILogger<FacturaEventoManejador> logger, IEnvioFacturaNubexDian envioFacturaNubexDian, IRabbitEventBus rabbitEventBus)
         {
             _logger = logger;
             _envioFacturaNubexDian = envioFacturaNubexDian;
+            _rabbitEventBus = rabbitEventBus;
         }
 
         public FacturaEventoManejador() { }
@@ -35,6 +38,9 @@ namespace AtowerEnvioNubex.Presentacion.Rabbit
             if (response?.Cufe != null)
             {
                 await Task.CompletedTask;
+                var asunto = "Asunto normal";
+                var cuerpo = "Body normal";
+                _rabbitEventBus.Publish(new EmailEventoQueue("ajtorres@sismaerp.com", asunto, cuerpo));
                 return;
             }
         }

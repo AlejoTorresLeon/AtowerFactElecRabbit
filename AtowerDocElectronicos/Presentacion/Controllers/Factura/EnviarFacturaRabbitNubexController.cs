@@ -32,6 +32,11 @@ namespace AtowerDocElectronico.Presentacion.Controllers.Factura
             
             var factura = await _enviarRabbit.EnviarFacturaRabbit(fasturaAtower, idUsuario ?? 0);
 
+            if (factura.Success != true)
+            {
+                return BadRequest(factura);
+            }
+
             return Ok(factura);
         }
 

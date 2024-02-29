@@ -1,9 +1,10 @@
 ﻿using AtowerDocElectronico.Aplicacion.Dtos.Factura;
+using AtowerDocElectronico.Aplicacion.Validations;
 
 namespace AtowerDocElectronico.Aplicacion.Interfaces
 {
     public interface IEnviarFacturaRabbitNubex
     {
-        Task<FacturaNubexDto> EnviarFacturaRabbit(FacturaAtowerDTO fasturaAtower, int idCompañia);
+        Task<ResponseGenericDtos> EnviarFacturaRabbit(FacturaAtowerDTO facturaAtower, int idUsuario);
     }
 }

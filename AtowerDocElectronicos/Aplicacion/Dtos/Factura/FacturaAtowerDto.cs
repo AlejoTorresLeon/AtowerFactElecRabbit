@@ -62,7 +62,7 @@
     public class TotalesNeto
     {
         public decimal? TotalCargos { get; set; }
-        public decimal? TotalImpuestoIncluido { get; set; }
+        //public decimal? TotalImpuestoIncluido { get; set; }
         public decimal? TotalDescuento { get; set; }
         public decimal? TotalPagar { get; set; }
     }

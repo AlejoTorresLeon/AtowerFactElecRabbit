@@ -83,8 +83,8 @@ namespace AtowerDocElectronico.Infraestructura.Migrations.Postgrest
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
-                    b.Property<byte[]>("Base64Pdf")
-                        .HasColumnType("bytea");
+                    b.Property<string>("Base64Pdf")
+                        .HasColumnType("text");
 
                     b.Property<string>("Contrato")
                         .HasColumnType("text");

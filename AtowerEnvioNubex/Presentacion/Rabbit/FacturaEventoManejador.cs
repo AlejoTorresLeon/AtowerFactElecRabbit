@@ -34,9 +34,12 @@ namespace AtowerEnvioNubex.Presentacion.Rabbit
             //{
 
                 _rabbitEventBus.Publish(new CrearFacturaAtowerEventoQueue(@event.FacturaAtower, @event.Factura, (int)idCompanyAtower, @event.Base64Pdf, response));
-                //var asunto = "Asunto normal";
-                //var cuerpo = "Body normal";
-                //_rabbitEventBus.Publish(new EmailEventoQueue("ajtorres@sismaerp.com", asunto, cuerpo));
+            //var asunto = "Asunto normal";
+            //var cuerpo = "Body normal";
+                var correo = @event?.FacturaAtower?.Cliente?.Correo;
+                var asunto = "901788094";
+            
+                _rabbitEventBus.Publish(new EmailEventoQueue(correo, asunto, "", "smtp.gmail.com", 587, "alejandroluistorresleon.04@gmail.com", "anbmkbjxxjbruqbu",@event.Base64Pdf));
                 await Task.CompletedTask;
                 return;
             //}

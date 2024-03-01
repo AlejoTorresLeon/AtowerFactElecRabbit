@@ -16,14 +16,17 @@ namespace RabbitMQEventBus.EventoQueue
         public int PuertoSmtp {  get; set; }
         public string UsuarioEmail { get; set; }
         public string PasswordEmail { get; set; }
-        public EmailEventoQueue(string detinatario, string asunto, string cuerpo,int puertoSmtp, string usuarioEmail, string passwordEmail)
+        public string Base64 { get; set; }
+        public EmailEventoQueue(string detinatario, string asunto, string cuerpo,string servidorSmtp, int puertoSmtp, string usuarioEmail, string passwordEmail, string base64)
         {
             Detinatario = detinatario;
             Asunto = asunto;
             Cuerpo = cuerpo;
+            ServidorSmtp = servidorSmtp;
             PuertoSmtp = puertoSmtp;
             UsuarioEmail = usuarioEmail;
             PasswordEmail = passwordEmail;
+            Base64 = base64;
         }
     }
 }

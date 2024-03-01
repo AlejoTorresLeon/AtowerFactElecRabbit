@@ -10,12 +10,12 @@ namespace AtowerDocElectronico.Presentacion.Controllers.Factura
     [Route("api/[controller]")]
     [ApiController]
     [Authorize]
-    public class EnviarFacturaRabbitNubexController : ControllerBase
+    public class EnviarFacturaRabbitController : ControllerBase
     {
         private readonly IEnviarFacturaRabbitNubex _enviarRabbit;
         private readonly ILogin _autenticacion;
 
-        public EnviarFacturaRabbitNubexController(IEnviarFacturaRabbitNubex enviarRabbit, ILogin autentication)
+        public EnviarFacturaRabbitController(IEnviarFacturaRabbitNubex enviarRabbit, ILogin autentication)
         {
             _enviarRabbit = enviarRabbit;
             _autenticacion = autentication;

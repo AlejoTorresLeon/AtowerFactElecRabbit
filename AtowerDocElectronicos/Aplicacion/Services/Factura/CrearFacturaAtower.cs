@@ -24,7 +24,7 @@ namespace AtowerDocElectronico.Aplicacion.Services.Factura
             {
                 string jsonFactura = JsonConvert.SerializeObject(facturaAtower);
                 string jsonFacturaNubex = JsonConvert.SerializeObject(facturaNubex);
-                byte[] pdfBytes = Convert.FromBase64String(Base64Pdf);
+                //byte[] pdfBytes = Convert.FromBase64String(Base64Pdf);
                 // Buscar si la factura ya existe en la base de datos
                 var facturaExistente = await _atowerDbContext.Facturas
                     .FirstOrDefaultAsync(f => f.Prefijo == facturaAtower.Prefijo && f.NumeroFactura == facturaAtower.Numero_factura && f.IdCompany == idCompany);
@@ -45,7 +45,7 @@ namespace AtowerDocElectronico.Aplicacion.Services.Factura
                     facturaExistente.ValorIva = (facturaAtower?.ImpuestoTotales != null) ? facturaAtower.ImpuestoTotales.Sum(i => i.ValorImpuesto ?? 0) : 0;
                     facturaExistente.ValorOtro = 0;
                     facturaExistente.ValorTotal = facturaAtower?.TotalesNeto?.TotalPagar;                                                            
-                    facturaExistente.Base64Pdf = pdfBytes;
+                    facturaExistente.Base64Pdf = Base64Pdf;
                     facturaExistente.JsonEnvioAtower = jsonFacturaNubex;
                     facturaExistente.JsonEnvioNubex = jsonFactura;                    
                     // Guardar los cambios
@@ -80,7 +80,7 @@ namespace AtowerDocElectronico.Aplicacion.Services.Factura
                         ValorTotal = facturaAtower?.TotalesNeto?.TotalPagar,
                         JsonEnvioAtower = jsonFactura,
                         JsonEnvioNubex = jsonFacturaNubex,
-                        Base64Pdf = pdfBytes
+                        Base64Pdf = Base64Pdf
                     };
 
                     // Agregar la nueva factura y guardar los cambios

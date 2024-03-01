@@ -29,9 +29,16 @@ namespace AtowerDocElectronico.Presentacion.Controllers.Autenticacion
             return Ok(token);
         }
 
+        [Authorize]
         [HttpPost("Registrar")]
         public async Task<IActionResult> Registrar(CrearUsuario usuarionew)
         {
+            var idRol = ObtenerIdRol();
+            if (idRol != 1) // Reemplaza esto con tu lógica real de verificación de permisos
+            {
+                return Forbid(); // Regresa un código de estado Forbidden
+            }
+
             var user = await _autenticacion.CreateUser(usuarionew);
 
             return Ok(user);
@@ -64,6 +71,18 @@ namespace AtowerDocElectronico.Presentacion.Controllers.Autenticacion
                 // Si no se pudo obtener un token válido, devolver un mensaje de error
                 return BadRequest("No se pudo obtener el token para el usuario proporcionado.");
             }
+        }
+
+        private int? ObtenerIdRol()
+        {
+            var accessToken = HttpContext.GetTokenAsync("access_token").Result;
+            if (accessToken == null)
+            {
+                return null;
+            }
+            
+            var validIdRol = _autenticacion.GetTokenIdRol(accessToken);
+            return validIdRol != null ? int.Parse(validIdRol) : (int?)null;
         }
 
     }

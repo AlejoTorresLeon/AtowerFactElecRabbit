@@ -20,7 +20,7 @@ namespace AtowerDocElectronico.Infraestructura.Entities
         public string? Cufe {  get; set; }
         public string? Contrato {  get; set; }
         public string? DireccionFacturaDian {  get; set; }
-        public byte[]? Base64Pdf { get; set; }
+        public string? Base64Pdf { get; set; }
         public string? JsonEnvioAtower { get; set; }
         public string? JsonEnvioNubex { get; set; }
         public string? JsonRespuestaNubex { get; set; }

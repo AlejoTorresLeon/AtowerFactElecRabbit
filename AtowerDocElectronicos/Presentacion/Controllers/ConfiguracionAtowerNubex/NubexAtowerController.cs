@@ -30,6 +30,14 @@ namespace AtowerDocElectronico.Presentacion.Controllers.ConfiguracionAtowerNubex
                 return BadRequest("No se pudo obtener el token para el usuario proporcionado.");
             }
 
+            var idRol = ObtenerIdRol();
+
+            if (idRol != 1 && idRol != 2) // Reemplaza esto con tu lógica real de verificación de permisos
+            {
+                return Forbid(); // Regresa un código de estado Forbidden
+            }
+
+
             var result = await _companiaService.CrearCompañia(compani, idUsuario.Value);
 
             if (result?.Success == true)
@@ -52,6 +60,18 @@ namespace AtowerDocElectronico.Presentacion.Controllers.ConfiguracionAtowerNubex
 
             var validIdUsuario = _autenticacion.GetTokenIdUsuario(accessToken);
             return validIdUsuario != null ? int.Parse(validIdUsuario) : (int?)null;
+        }
+
+        private int? ObtenerIdRol()
+        {
+            var accessToken = HttpContext.GetTokenAsync("access_token").Result;
+            if (accessToken == null)
+            {
+                return null;
+            }
+
+            var validIdRol = _autenticacion.GetTokenIdRol(accessToken);
+            return validIdRol != null ? int.Parse(validIdRol) : (int?)null;
         }
     }
 }

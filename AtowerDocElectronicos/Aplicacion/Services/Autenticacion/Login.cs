@@ -2,6 +2,7 @@
 using AtowerDocElectronico.Aplicacion.Interfaces;
 using AtowerDocElectronico.Infraestructura.Entities;
 using AtowerDocElectronico.Infraestructura.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using MySqlConnector;
@@ -24,7 +25,7 @@ namespace AtowerDocElectronico.Aplicacion.Services.Autenticacion
             _jwtExpirationMinutes = 7 * 24 * 60; // 7 días en minutos
             _atowerDbContext = atowerDbContext;
         }
-
+        
         public async Task<Usuarios?> CreateUser(CrearUsuario usuarioNew)
         {
             if (usuarioNew == null)
@@ -38,6 +39,7 @@ namespace AtowerDocElectronico.Aplicacion.Services.Autenticacion
             {
                 throw new Exception($"Valdidacion");
             }
+
             string passwordHash = GeneratePasswordHash(usuarioNew.Password, Convert.FromBase64String(saltBytes));
 
            
@@ -86,8 +88,25 @@ namespace AtowerDocElectronico.Aplicacion.Services.Autenticacion
         }
 
 
-        private string? GenerateJwtToken(Usuarios user)
+        private  string? GenerateJwtToken(Usuarios user)
         {
+            
+            //var compañia = _atowerDbContext.Compañias
+            //    .Select(t => t.TokenNubex)
+            //    .FirstOrDefaultAsync(t => t.Identificacion == user.Identificacion.ToString());
+
+
+            var compañia =  _atowerDbContext.Compañias
+                            .FirstOrDefault(t => t.Identificacion == user.Identificacion.ToString());
+
+            var tokenNubex = "";
+            if (compañia?.TokenNubex != null)
+            {
+                tokenNubex = compañia.TokenNubex;
+
+            }
+
+
             var tokenHandler = new JwtSecurityTokenHandler();
 
             // Verificar si la configuración JWT:Key y JWT:EncryptionKey son nulas
@@ -118,7 +137,8 @@ namespace AtowerDocElectronico.Aplicacion.Services.Autenticacion
             var claims = new List<Claim>
             {
                 new Claim("IdUsuario", user.Id.ToString()),
-                new Claim("IdRol", user.IdRol.ToString())
+                new Claim("IdRol", user.IdRol.ToString()),
+                new Claim("TokenNubex", tokenNubex)
             };
 
             var tokenDescriptor = new SecurityTokenDescriptor
@@ -188,6 +208,27 @@ namespace AtowerDocElectronico.Aplicacion.Services.Autenticacion
             }
             return claimsPrincipal;
         }
+        public string? GetTokenIdRol(string token)
+        {
+            var claimsPrincipal = DevolverIdRolToken(token);
+            if (claimsPrincipal == null)
+            {
+                Console.WriteLine("Las claves JWT no están configuradas correctamente.");
+                return null;
+            }
+            return claimsPrincipal;
+        }
+
+        public string? GetTokenNubex(string token)
+        {
+            var claimsPrincipal = DevolverTokenNubexToken(token);
+            if (claimsPrincipal == null)
+            {
+                Console.WriteLine("Las claves JWT no están configuradas correctamente.");
+                return null;
+            }
+            return claimsPrincipal;
+        }
 
         private string? ValidateToken2(string token)
         {
@@ -227,8 +268,81 @@ namespace AtowerDocElectronico.Aplicacion.Services.Autenticacion
 
         }
 
+        private string? DevolverTokenNubexToken(string token)
+        {
+            var tokenHandler = new JwtSecurityTokenHandler();
+            string? jwtKey = _configuration["JWT:Key"];
+            string? encryptionKey2 = _configuration["JWT:EncryptionKey"];
+
+            if (jwtKey == null || encryptionKey2 == null)
+            {
+                // Manejar el caso en el que las claves JWT no estén configuradas
+                Console.WriteLine("Las claves JWT no están configuradas correctamente.");
+                return null;
+            }
 
 
+            var key = Encoding.UTF8.GetBytes(jwtKey);
+            var encryptionKey = Encoding.UTF8.GetBytes(encryptionKey2);
+
+            tokenHandler.ValidateToken(token, new TokenValidationParameters
+            {
+                ValidateIssuerSigningKey = true,
+                IssuerSigningKey = new SymmetricSecurityKey(key),
+                TokenDecryptionKey = new SymmetricSecurityKey(encryptionKey), // Agrega la clave de cifrado
+                ValidateIssuer = false,
+                ValidateAudience = false,
+                ClockSkew = TimeSpan.Zero,
+                ValidateLifetime = true // para asegurarse de que el token no esté vencido
+            }, out SecurityToken validatedToken);
+
+            var jwtToken = (JwtSecurityToken)validatedToken;
+            var connectionStringClaim = jwtToken.Claims.FirstOrDefault(c => c.Type == "TokenNubex")?.Value;
+
+            if (string.IsNullOrEmpty(connectionStringClaim))
+                throw new SecurityTokenValidationException("El TokenNubex no se encontró en el token.");
+
+            return connectionStringClaim;
+
+        }
+
+        private string? DevolverIdRolToken(string token)
+        {
+            var tokenHandler = new JwtSecurityTokenHandler();
+            string? jwtKey = _configuration["JWT:Key"];
+            string? encryptionKey2 = _configuration["JWT:EncryptionKey"];
+
+            if (jwtKey == null || encryptionKey2 == null)
+            {
+                // Manejar el caso en el que las claves JWT no estén configuradas
+                Console.WriteLine("Las claves JWT no están configuradas correctamente.");
+                return null;
+            }
+
+
+            var key = Encoding.UTF8.GetBytes(jwtKey);
+            var encryptionKey = Encoding.UTF8.GetBytes(encryptionKey2);
+
+            tokenHandler.ValidateToken(token, new TokenValidationParameters
+            {
+                ValidateIssuerSigningKey = true,
+                IssuerSigningKey = new SymmetricSecurityKey(key),
+                TokenDecryptionKey = new SymmetricSecurityKey(encryptionKey), // Agrega la clave de cifrado
+                ValidateIssuer = false,
+                ValidateAudience = false,
+                ClockSkew = TimeSpan.Zero,
+                ValidateLifetime = true // para asegurarse de que el token no esté vencido
+            }, out SecurityToken validatedToken);
+
+            var jwtToken = (JwtSecurityToken)validatedToken;
+            var connectionStringClaim = jwtToken.Claims.FirstOrDefault(c => c.Type == "IdRol")?.Value;
+
+            if (string.IsNullOrEmpty(connectionStringClaim))
+                throw new SecurityTokenValidationException("El IdRol no se encontró en el token.");
+
+            return connectionStringClaim;
+
+        }
 
         private string GenerateSalt()
         {

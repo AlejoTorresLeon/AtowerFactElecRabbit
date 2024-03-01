@@ -10,5 +10,7 @@ namespace AtowerDocElectronico.Aplicacion.Interfaces
         //string GenerateSalt();
         //string GeneratePasswordHash(string password, byte[] salt);
         Task<Usuarios?> CreateUser(CrearUsuario usuarioNew);
+        string? GetTokenIdRol(string token);
+        string? GetTokenNubex(string token);
     }
 }

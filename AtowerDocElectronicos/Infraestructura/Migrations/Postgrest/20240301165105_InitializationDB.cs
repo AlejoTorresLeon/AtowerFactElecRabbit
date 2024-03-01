@@ -114,7 +114,7 @@ namespace AtowerDocElectronico.Infraestructura.Migrations.Postgrest
                     Cufe = table.Column<string>(type: "text", nullable: true),
                     Contrato = table.Column<string>(type: "text", nullable: true),
                     DireccionFacturaDian = table.Column<string>(type: "text", nullable: true),
-                    Base64Pdf = table.Column<byte[]>(type: "bytea", nullable: true),
+                    Base64Pdf = table.Column<string>(type: "text", nullable: true),
                     JsonEnvioAtower = table.Column<string>(type: "text", nullable: true),
                     JsonEnvioNubex = table.Column<string>(type: "text", nullable: true),
                     JsonRespuestaNubex = table.Column<string>(type: "text", nullable: true)

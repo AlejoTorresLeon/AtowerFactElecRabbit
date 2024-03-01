@@ -16,6 +16,9 @@ namespace AtowerDocElectronico.Infraestructura.Migrations.Postgrest
             migrationBuilder.EnsureSchema(
                 name: "Configuracion");
 
+            migrationBuilder.EnsureSchema(
+                name: "Envios");
+
             migrationBuilder.CreateTable(
                 name: "Roles",
                 schema: "Configuracion",
@@ -71,6 +74,7 @@ namespace AtowerDocElectronico.Infraestructura.Migrations.Postgrest
                     Email = table.Column<string>(type: "text", nullable: false),
                     IdUsuarioNubex = table.Column<decimal>(type: "numeric(20,0)", nullable: false),
                     IdCompanyNubex = table.Column<decimal>(type: "numeric(20,0)", nullable: false),
+                    IdUsuarioCliente = table.Column<int>(type: "integer", nullable: false),
                     TokenNubex = table.Column<string>(type: "text", nullable: false),
                     Habilitado = table.Column<bool>(type: "boolean", nullable: false),
                     Bloqueo = table.Column<bool>(type: "boolean", nullable: false),
@@ -80,10 +84,49 @@ namespace AtowerDocElectronico.Infraestructura.Migrations.Postgrest
                 {
                     table.PrimaryKey("PK_Compañia", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Compañia_Usuarios_IdUsuarioCreador",
-                        column: x => x.IdUsuarioCreador,
+                        name: "FK_Compañia_Usuarios_IdUsuarioCliente",
+                        column: x => x.IdUsuarioCliente,
                         principalSchema: "Configuracion",
                         principalTable: "Usuarios",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Facturas",
+                schema: "Envios",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    IdCompany = table.Column<int>(type: "integer", nullable: false),
+                    Prefijo = table.Column<string>(type: "text", nullable: false),
+                    NumeroFactura = table.Column<string>(type: "text", nullable: false),
+                    Factura = table.Column<string>(type: "text", nullable: false),
+                    Estado = table.Column<int>(type: "integer", nullable: true),
+                    FechaFactura = table.Column<string>(type: "text", nullable: true),
+                    NitEmpresa = table.Column<string>(type: "text", nullable: true),
+                    DocumentoAdquisiente = table.Column<string>(type: "text", nullable: true),
+                    ValorFactura = table.Column<decimal>(type: "numeric", nullable: true),
+                    ValorIva = table.Column<decimal>(type: "numeric", nullable: true),
+                    ValorOtro = table.Column<decimal>(type: "numeric", nullable: true),
+                    ValorTotal = table.Column<decimal>(type: "numeric", nullable: true),
+                    Cufe = table.Column<string>(type: "text", nullable: true),
+                    Contrato = table.Column<string>(type: "text", nullable: true),
+                    DireccionFacturaDian = table.Column<string>(type: "text", nullable: true),
+                    Base64Pdf = table.Column<byte[]>(type: "bytea", nullable: true),
+                    JsonEnvioAtower = table.Column<string>(type: "text", nullable: true),
+                    JsonEnvioNubex = table.Column<string>(type: "text", nullable: true),
+                    JsonRespuestaNubex = table.Column<string>(type: "text", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Facturas", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Facturas_Compañia_IdCompany",
+                        column: x => x.IdCompany,
+                        principalSchema: "Configuracion",
+                        principalTable: "Compañia",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -111,10 +154,16 @@ namespace AtowerDocElectronico.Infraestructura.Migrations.Postgrest
                 });
 
             migrationBuilder.CreateIndex(
-                name: "IX_Compañia_IdUsuarioCreador",
+                name: "IX_Compañia_IdUsuarioCliente",
                 schema: "Configuracion",
                 table: "Compañia",
-                column: "IdUsuarioCreador");
+                column: "IdUsuarioCliente");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Facturas_IdCompany",
+                schema: "Envios",
+                table: "Facturas",
+                column: "IdCompany");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Usuarios_IdRol",
@@ -126,6 +175,10 @@ namespace AtowerDocElectronico.Infraestructura.Migrations.Postgrest
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.DropTable(
+                name: "Facturas",
+                schema: "Envios");
+
             migrationBuilder.DropTable(
                 name: "Compañia",
                 schema: "Configuracion");

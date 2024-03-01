@@ -22,7 +22,7 @@ namespace AtowerDocElectronico.Presentacion.Controllers.Factura
         }
 
         [HttpPost("EnviarFacturaCola")]
-        public async Task<IActionResult> EnviarFacturaCola([FromBody] FacturaAtowerDTO fasturaAtower)
+        public async Task<IActionResult> EnviarFacturaCola([FromBody] FacturaAtowerDto_Base64pdf fasturaAtower)
         {
             var idUsuario = ObtenerIdUsuario();
             if (idUsuario == null)
@@ -30,7 +30,7 @@ namespace AtowerDocElectronico.Presentacion.Controllers.Factura
                 return BadRequest("No se pudo obtener el token para el usuario proporcionado.");
             }
             
-            var factura = await _enviarRabbit.EnviarFacturaRabbit(fasturaAtower, idUsuario ?? 0);
+            var factura = await _enviarRabbit.EnviarFacturaRabbit(fasturaAtower.FacturaAtowerDTO, idUsuario ?? 0, fasturaAtower.Base64Pdf);
 
             if (factura.Success != true)
             {

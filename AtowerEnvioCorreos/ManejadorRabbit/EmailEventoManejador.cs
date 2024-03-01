@@ -19,7 +19,7 @@ namespace AtowerEnvioCorreos.ManejadorRabbit
         public async Task Handle(EmailEventoQueue @event)
         {
 
-            await _correoService.EnviarCorreoAsync(@event.Detinatario);
+            await _correoService.EnviarCorreoAsync(@event.Detinatario,@event.Asunto,@event.Cuerpo,@event.ServidorSmtp,@event.PuertoSmtp,@event.UsuarioEmail,@event.PasswordEmail);
                 
 
         }

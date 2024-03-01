@@ -4,6 +4,7 @@ using AtowerDocElectronico.Aplicacion.Services.ConfiguracionAtowerNubex;
 using AtowerDocElectronico.Aplicacion.Services.Factura;
 using AtowerDocElectronico.Aplicacion.Services.Http;
 using AtowerDocElectronico.Aplicacion.Services.Maestros_Parametros;
+using AtowerDocElectronico.Aplicacion.Services.Rabbit;
 using AtowerDocElectronico.Infraestructura.Exceptions;
 using AtowerDocElectronico.Infraestructura.Interfaces;
 using AtowerDocElectronico.Infraestructura.Persistencia.MySQL;
@@ -14,6 +15,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using RabbitMQEventBus.BusRabbit;
+using RabbitMQEventBus.EventoQueue;
 using RabbitMQEventBus.Implement;
 using System.Reflection;
 using System.Text;
@@ -83,6 +85,7 @@ builder.Services.AddScoped<ILogin, Login>();
 builder.Services.AddScoped<IEnviarHttp, EnviarHttp>();
 builder.Services.AddScoped<ICompañia, CompañiaServices>();
 builder.Services.AddScoped<IEnviarFacturaRabbitNubex, EnviarFacturaRabbitNubex>();
+builder.Services.AddScoped<IFacturaAtower, CrearFacturaAtower>();
 
 
 var jwtKey = builder.Configuration["JWT:key"];
@@ -108,16 +111,18 @@ else
 }
 
 Assembly yourHandlerAssembly = typeof(Program).Assembly;
-
 builder.Services.AddSingleton<IRabbitEventBus, RabbitEventBus>(sp =>
 {
     var scopeFactory = sp.GetRequiredService<IServiceScopeFactory>();
     return new RabbitEventBus(sp.GetService<IMediator>(), scopeFactory);
 });
+builder.Services.AddTransient<CrearFacturaAtowerEventoManejador>();
+builder.Services.AddTransient<IEventoManejador<CrearFacturaAtowerEventoQueue>, CrearFacturaAtowerEventoManejador>();
 builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(yourHandlerAssembly));
 
 
 var app = builder.Build();
+var serviceProvider = app.Services;
 
 if (app.Environment.IsDevelopment())
 {
@@ -198,5 +203,6 @@ app.UseAuthorization();
 
 
 app.MapControllers();
-
+var eventBus = serviceProvider.GetRequiredService<IRabbitEventBus>();
+eventBus.Subscribe<CrearFacturaAtowerEventoQueue, CrearFacturaAtowerEventoManejador>();
 app.Run();

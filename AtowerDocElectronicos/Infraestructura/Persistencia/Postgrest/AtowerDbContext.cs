@@ -1,6 +1,7 @@
 ﻿using AtowerDocElectronico.Infraestructura.Entities;
 using AtowerDocElectronico.Infraestructura.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using Newtonsoft.Json.Linq;
 using System.Threading.Tasks;
 
 namespace AtowerDocElectronico.Infraestructura.Persistencia.Postgrest
@@ -10,6 +11,7 @@ namespace AtowerDocElectronico.Infraestructura.Persistencia.Postgrest
         public DbSet<Roles> Roles { get; set; }
         public DbSet<Usuarios> Usuarios { get; set; }
         public DbSet<Compañia> Compañias { get; set; }
+        public DbSet<Facturas> Facturas { get; set; }
 
         public AtowerDbContext(DbContextOptions<AtowerDbContext> options) : base(options)
         {
@@ -21,14 +23,24 @@ namespace AtowerDocElectronico.Infraestructura.Persistencia.Postgrest
             modelBuilder.Entity<Usuarios>().ToTable("Usuarios", schema: "Configuracion");
             modelBuilder.Entity<Roles>().ToTable("Roles", schema: "Configuracion");
             modelBuilder.Entity<Compañia>().ToTable("Compañia", schema: "Configuracion");
+            modelBuilder.Entity<Facturas>().ToTable("Facturas", schema: "Envios");
+
+            //modelBuilder.Entity<JObject>().HasNoKey();
+            //modelBuilder.Entity<JToken>().HasNoKey();
+            modelBuilder.Entity<Facturas>()
+            .HasKey(f => f.Id); // Definiendo la clave primaria
+
+            modelBuilder.Entity<Facturas>()
+            .Property(u => u.Id)
+            .ValueGeneratedOnAdd(); 
 
             modelBuilder.Entity<Usuarios>()
               .Property(u => u.Id)
-              .ValueGeneratedOnAdd(); // Configura el incremento automático del ID al insertar un nuevo registro
+              .ValueGeneratedOnAdd();
 
             modelBuilder.Entity<Roles>()
                 .Property(r => r.Id)
-                .ValueGeneratedOnAdd(); // Configura el incremento automático del ID al insertar un nuevo registro
+                .ValueGeneratedOnAdd(); 
 
             modelBuilder.Entity<Compañia>()
                 .Property(c => c.Id)
@@ -43,7 +55,14 @@ namespace AtowerDocElectronico.Infraestructura.Persistencia.Postgrest
             modelBuilder.Entity<Compañia>()
                 .HasOne(c => c.Usuarios)
                 .WithMany()
-                .HasForeignKey(c => c.IdUsuarioCreador);
+                .HasForeignKey(c => c.IdUsuarioCreador)
+                .HasForeignKey(c => c.IdUsuarioCliente);
+
+            modelBuilder.Entity<Facturas>()
+             .HasOne(c => c.Compañia)
+             .WithMany()
+             .HasForeignKey(c => c.IdCompany);         
+
 
             modelBuilder.Seed();
         }

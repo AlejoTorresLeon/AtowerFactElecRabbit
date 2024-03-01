@@ -11,6 +11,7 @@ namespace AtowerDocElectronico.Infraestructura.Entities
         public required string Email { get; set; }
         public required ulong IdUsuarioNubex { get; set; }
         public required ulong IdCompanyNubex { get; set; }
+        public required int IdUsuarioCliente { get; set; }
         public required string TokenNubex { get; set; }
         public required bool Habilitado { get; set; }
         public required bool Bloqueo { get; set; }

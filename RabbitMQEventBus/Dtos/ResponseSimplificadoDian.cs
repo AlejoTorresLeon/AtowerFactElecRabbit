@@ -1,7 +1,7 @@
-﻿namespace AtowerEnvioNubex.Aplicacion.Dtos
+﻿namespace RabbitMQEventBus.Dtos
 {
     public class ResponseSimplificadoDian
-    {        
+    {
         public int? IdCompañia { get; set; }
         public string? Factura { get; set; }
         public string? Message { get; set; }

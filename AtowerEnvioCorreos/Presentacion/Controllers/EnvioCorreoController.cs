@@ -17,9 +17,9 @@ namespace AtowerEnvioCorreos.Presentacion.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> EnviarCorreo(string destinatario)
+        public async Task<IActionResult> EnviarCorreo(string destinatario, string asunto, string cuerpo, string servidorSmtp, int PuertoSmtp, string usuarioEmail, string passwordEmail)
         {
-            await _correoService.EnviarCorreoAsync(destinatario);
+            await _correoService.EnviarCorreoAsync(destinatario, asunto, cuerpo, servidorSmtp, PuertoSmtp, usuarioEmail, passwordEmail);
             return Ok("Correo enviado exitosamente.");
         }
     }

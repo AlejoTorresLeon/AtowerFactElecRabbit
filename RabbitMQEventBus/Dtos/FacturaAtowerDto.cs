@@ -1,4 +1,4 @@
-﻿namespace AtowerDocElectronico.Aplicacion.Dtos.Factura
+﻿namespace RabbitMQEventBus.Dtos
 {
     public class Cliente
     {
@@ -69,10 +69,10 @@
 
     public class FacturaAtowerDTO
     {
-        public string? Numero_factura { get; set; }
-        public string? Fecha { get; set; }
+        public string Numero_factura { get; set; } = null!;
+        public string Fecha { get; set; }
         public string? Hora { get; set; }
-        public string? Prefijo { get; set; }
+        public string Prefijo { get; set; } = null!;
         public bool? EnviarCorreo { get; set; }
         public string? DetalleGeneral { get; set; }
         public string? DetalleCabecera { get; set; }

@@ -2,6 +2,7 @@
 using AtowerEnvioNubex.Aplicacion.Dtos;
 using AtowerEnvioNubex.Aplicacion.Interfaces;
 using Microsoft.AspNetCore.Mvc;
+using RabbitMQEventBus.Dtos;
 
 namespace AtowerEnvioNubex.Presentacion.EnviarNubexDian
 {
@@ -17,7 +18,7 @@ namespace AtowerEnvioNubex.Presentacion.EnviarNubexDian
         }
 
         [HttpPost("enviarFactura")]
-        public async Task<IActionResult> EnviarFactura([FromBody] FacturaDian factura,int? idCompani)
+        public async Task<IActionResult> EnviarFactura([FromBody] FacturaNubex factura,int? idCompani)
         {
             if (factura == null || idCompani == null)
             {

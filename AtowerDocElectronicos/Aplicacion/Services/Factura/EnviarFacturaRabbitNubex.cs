@@ -20,14 +20,17 @@ namespace AtowerDocElectronico.Aplicacion.Services.Factura
         private readonly INubexDbContext _nubexDbContext;
         private readonly IRabbitEventBus _rabbitEventBus;
         private readonly IAtowerDbContext _atowerDbContext;
-        public EnviarFacturaRabbitNubex(INubexDbContext nubexDbContext, IRabbitEventBus rabbitEventBus, IAtowerDbContext atowerDbContext)
+        private readonly IFacturaAtower _facturaAtower;
+
+        public EnviarFacturaRabbitNubex(INubexDbContext nubexDbContext, IRabbitEventBus rabbitEventBus, IAtowerDbContext atowerDbContext, IFacturaAtower facturaAtower)
         {
             _nubexDbContext = nubexDbContext;
             _rabbitEventBus = rabbitEventBus;
             _atowerDbContext = atowerDbContext;
+            _facturaAtower = facturaAtower;
         }
 
-        public async Task<ResponseGenericDtos> EnviarFacturaRabbit(FacturaAtowerDTO facturaAtower, int idUsuario)
+        public async Task<ResponseGenericDtos> EnviarFacturaRabbit(FacturaAtowerDTO facturaAtower, int idUsuarioCliente, string? Base64Pdf = null)
         {
             var response = new ResponseGenericDtos();
 
@@ -43,22 +46,58 @@ namespace AtowerDocElectronico.Aplicacion.Services.Factura
 
             try
             {
-                var idCompañia = await _atowerDbContext.Compañias
-                                        .Where(c => c.IdUsuarioCreador == idUsuario)
-                                        .Select(c => c.IdCompanyNubex)
+
+                var idCompañiaNubex = await _atowerDbContext.Compañias
+                            .Where(c => c.IdUsuarioCliente == idUsuarioCliente)
+                            .Select(c => c.IdCompanyNubex)
+                            .FirstOrDefaultAsync();
+
+                var idCompañiaAtower = await _atowerDbContext.Compañias
+                                        .Where(c => c.IdUsuarioCliente == idUsuarioCliente)
+                                        .Select(c => c.Id)
                                         .FirstOrDefaultAsync();
 
-                var facturaNubex = await TransformacionFactura(facturaAtower, (int)idCompañia);
+                var facturaValidacion = await _atowerDbContext.Facturas
+                                    .Where(f => f.IdCompany == (int)idCompañiaAtower && f.NumeroFactura == facturaAtower.Numero_factura)
+                                    .Select(f => new { NumeroFactura = f.NumeroFactura, EstadoFactura = f.Estado })
+                                    .FirstOrDefaultAsync();
 
-                var facturaRabbit = TransformacionRabbit(facturaNubex);
+                if (facturaValidacion?.EstadoFactura == 1 || facturaValidacion?.EstadoFactura == 0)
+                {
+                    response.Success = false;
+                    response.Message = $"La factura {facturaAtower.Numero_factura} ya se envió correctamente o se encuentra en proceso de envio.";                    
+                    return response;
+                }
+
+
+
+                var facturaNubex = await TransformacionFactura(facturaAtower, (int)idCompañiaNubex);
+
+                //var facturaRabbit = TransformacionRabbit(facturaNubex);
+
+
 
                 // Realizar la validación de los totales
                 if (ValidarTotales(facturaAtower, facturaNubex, out List<string> totalesErrores))
                 {
-                    _rabbitEventBus.Publish(new FacturaEventoQueue(facturaRabbit, (int?)idCompañia));
+                    var factura = await _facturaAtower.GuardarOActualizarFactura(facturaAtower, facturaNubex,(int)idCompañiaAtower, Base64Pdf);
+
+                    if (factura == null)
+                    {
+                        response.Success = false;
+                        response.Message = "Hubo un error al crear la tactura en atower.";
+                        return response;
+                    }
+
+                    _rabbitEventBus.Publish(new FacturaEventoQueue(facturaNubex, facturaAtower, (int?)idCompañiaNubex, Base64Pdf,idCompañiaAtower));
+
+                    
+
                     response.Success = true;
                     response.Message = "La factura se envió correctamente.";
-                    response.Data = facturaRabbit;
+                    response.Data = facturaNubex;
+                    
+
                 }
                 else
                 {
@@ -241,13 +280,13 @@ namespace AtowerDocElectronico.Aplicacion.Services.Factura
         }
 
 
-        private bool ValidarTotales(FacturaAtowerDTO facturaAtower, FacturaNubexDto facturaNubex, out List<string> errores)
+        private bool ValidarTotales(FacturaAtowerDTO facturaAtower, FacturaNubex facturaNubex, out List<string> errores)
         {
             errores = new List<string>();
 
             // Validar los totales de la factura
             decimal totalCargosLineas = (facturaAtower.Cargos != null) ? facturaAtower.Cargos.Sum(c => c.ValorCargo ?? 0) : 0;
-            decimal totalCargosTotal = (facturaAtower.TotalesNeto != null) ? (decimal)facturaAtower.TotalesNeto.TotalCargos : 0;
+            decimal totalCargosTotal = (facturaAtower.TotalesNeto != null) ? (decimal)facturaAtower?.TotalesNeto?.TotalCargos : 0;
             decimal totalDescuentosGenerales = (facturaAtower.DescuentosGenerales != null) ? facturaAtower.DescuentosGenerales.Sum(d => d.ValorDescuento ?? 0) : 0;
             decimal totalImpuestos = (facturaAtower.ImpuestoTotales != null) ? facturaAtower.ImpuestoTotales.Sum(i => i.ValorImpuesto ?? 0) : 0;
             decimal totalImpuestoCargosLineas =(facturaAtower.Cargos != null) ? (facturaAtower.Cargos != null) ? facturaAtower.Cargos.Sum(c => (c.ImpuestoCargo != null) ? c.ImpuestoCargo.Sum(i => i.ValorImpuesto ?? 0) : 0) : 0 : 0;
@@ -275,107 +314,8 @@ namespace AtowerDocElectronico.Aplicacion.Services.Factura
 
             return errores.Count == 0;
         }
-        private FacturaNubex TransformacionRabbit(FacturaNubexDto factura)
-        {
-            var facturaNubex = new FacturaNubex();
 
-            // Asignación de propiedades una por una
-            facturaNubex.number = factura.number;
-            facturaNubex.type_document_id = factura.type_document_id;
-            facturaNubex.date = factura.date;
-            facturaNubex.time = factura.time;
-            facturaNubex.resolution_number = factura?.resolution_number;
-            facturaNubex.prefix = factura?.prefix;
-            facturaNubex.notes = factura?.notes;
-            facturaNubex.head_note = factura?.head_note;
-            facturaNubex.foot_note = factura?.foot_note;
-            facturaNubex.sendmail = factura?.sendmail;
-            facturaNubex.sendmailtome = factura?.sendmailtome;
-
-            // Asignación de la propiedad customer
-            facturaNubex.customer = new RabbitMQEventBus.Dtos.ClienteDTO
-            {
-                identification_number = factura?.customer?.identification_number,
-                dv = factura?.customer?.dv,
-                name = factura?.customer?.name,
-                phone = factura?.customer?.phone,
-                address = factura?.customer?.address,
-                email = factura?.customer?.email,
-                merchant_registration = factura?.customer?.merchant_registration,
-                type_document_identification_id = factura?.customer?.type_document_identification_id,
-                type_organization_id = factura?.customer?.type_organization_id,
-                type_regime_id = factura?.customer?.type_regime_id,
-                type_liability_id = factura?.customer?.type_liability_id,
-                municipality_id = factura?.customer?.municipality_id
-            };
-
-            // Asignación de la propiedad payment_form
-            facturaNubex.payment_form = new RabbitMQEventBus.Dtos.FormaPagoDTO
-            {
-                payment_form_id = factura?.payment_form?.payment_form_id,
-                payment_method_id = factura?.payment_form?.payment_method_id,
-                payment_due_date = factura?.payment_form?.payment_due_date,
-                duration_measure = factura?.payment_form?.duration_measure
-            };
-
-            // Asignación de la propiedad allowance_charges
-            facturaNubex.allowance_charges = factura?.allowance_charges?
-                .Select(r => new RabbitMQEventBus.Dtos.DescuentoGeneralDTO
-            {
-                discount_id = r.discount_id,
-                charge_indicator = r.charge_indicator,
-                allowance_charge_reason = r.allowance_charge_reason,
-                amount = r.amount,
-                base_amount = r.base_amount
-            }).ToList();
-
-            // Asignación de la propiedad invoice_lines
-            facturaNubex.invoice_lines = factura?.invoice_lines?
-                .Select(c => new RabbitMQEventBus.Dtos.CargoDTO
-                {
-                    unit_measure_id = c.unit_measure_id,
-                    invoiced_quantity = c.invoiced_quantity,
-                    line_extension_amount = c.line_extension_amount,
-                    description = c.description,
-                    notes = c.notes,
-                    free_of_charge_indicator = c.free_of_charge_indicator,
-                    code = c.code,
-                    tax_totals = c.tax_totals != null
-                        ? c.tax_totals.Select(p => new RabbitMQEventBus.Dtos.ImpuestoCargoDTO
-                        {
-                            tax_id = p.tax_id,
-                            tax_amount = p.tax_amount,
-                            taxable_amount = p.taxable_amount,
-                            percent = p.percent
-                        }).ToList()
-                        : new List<RabbitMQEventBus.Dtos.ImpuestoCargoDTO>(),
-                    base_quantity = c.base_quantity,
-                    type_item_identification_id = c.type_item_identification_id,
-                    price_amount = c.price_amount
-                }).ToList();
-
-            // Asignación de la propiedad tax_totals
-            facturaNubex.tax_totals = factura?.tax_totals?.Select(i => new RabbitMQEventBus.Dtos.ImpuestoTotalDTO
-            {
-                tax_id = i.tax_id,
-                tax_amount = i.tax_amount,
-                percent = i.percent,
-                taxable_amount = i.taxable_amount
-            }).ToList();
-
-            // Asignación de la propiedad legal_monetary_totals
-            facturaNubex.legal_monetary_totals = new RabbitMQEventBus.Dtos.LegalMonetaryTotalsDTO
-            {
-                line_extension_amount = factura?.legal_monetary_totals?.line_extension_amount,
-                tax_exclusive_amount = factura?.legal_monetary_totals?.tax_exclusive_amount,
-                tax_inclusive_amount = factura?.legal_monetary_totals?.tax_inclusive_amount,
-                allowance_total_amount = factura?.legal_monetary_totals?.allowance_total_amount,
-                payable_amount = factura?.legal_monetary_totals?.payable_amount
-            };
-
-            return facturaNubex;
-        }
-        private async Task<FacturaNubexDto> TransformacionFactura(FacturaAtowerDTO facturadto, int idCompañia)
+        private async Task<FacturaNubex> TransformacionFactura(FacturaAtowerDTO facturadto, int idCompañia)
         {
             using IDbConnection dbConnection = _nubexDbContext.Database.GetDbConnection();
 
@@ -389,20 +329,20 @@ namespace AtowerDocElectronico.Aplicacion.Services.Factura
                 : 0;
 
 
-            return new FacturaNubexDto
+            return new FacturaNubex
             {
-                number = facturadto.Numero_factura,
+                number = facturadto?.Numero_factura,
                 type_document_id = "1",
-                date = facturadto.Fecha,
-                time = facturadto.Hora,
+                date = facturadto?.Fecha,
+                time = facturadto?.Hora,
                 resolution_number = documentos?.ResolutionNumber,
                 prefix = documentos?.Prefix,
-                notes = facturadto.DetalleGeneral,
-                head_note = facturadto.DetalleCabecera,
-                foot_note = facturadto.DetallePieHoja,
-                sendmail = facturadto.EnviarCorreo,
-                sendmailtome = facturadto.EnviarCorreo,
-                customer = new Dtos.Factura.ClienteDTO
+                notes = facturadto?.DetalleGeneral,
+                head_note = facturadto?.DetalleCabecera,
+                foot_note = facturadto?.DetallePieHoja,
+                sendmail = facturadto?.EnviarCorreo,
+                sendmailtome = facturadto?.EnviarCorreo,
+                customer = new ClienteDTO
                 {
                     identification_number = facturadto?.Cliente?.Identificacion,
                     dv = facturadto?.Cliente?.Dv,
@@ -417,14 +357,14 @@ namespace AtowerDocElectronico.Aplicacion.Services.Factura
                     type_liability_id = facturadto?.Cliente?.IdTipoResponsabilidad,
                     municipality_id = facturadto?.Cliente?.IdCiudad
                 },
-                payment_form = new Dtos.Factura.FormaPagoDTO
+                payment_form = new FormaPagoDTO
                 {
                     payment_form_id = facturadto?.FormaPago?.IdFormaPago,
                     payment_method_id = facturadto?.FormaPago?.IdMetodoPago,
                     payment_due_date = facturadto?.FormaPago?.FechaPago,
                     duration_measure = facturadto?.FormaPago?.Duracion
                 },
-                allowance_charges = facturadto?.DescuentosGenerales?.Select(r => new Dtos.Factura.DescuentoGeneralDTO
+                allowance_charges = facturadto?.DescuentosGenerales?.Select(r => new DescuentoGeneralDTO
                 {
                     discount_id = r.IdTipoDescuento,
                     charge_indicator = false,
@@ -432,7 +372,7 @@ namespace AtowerDocElectronico.Aplicacion.Services.Factura
                     amount = r.ValorDescuento,
                     base_amount = r.ValorBaseDescuento
                 }).ToList(),
-                invoice_lines = facturadto?.Cargos?.Select(c => new Dtos.Factura.CargoDTO
+                invoice_lines = facturadto?.Cargos?.Select(c => new CargoDTO
                 {
                     unit_measure_id = 70,
                     invoiced_quantity = c.Cantidad,
@@ -441,7 +381,7 @@ namespace AtowerDocElectronico.Aplicacion.Services.Factura
                     notes = c.Nota,
                     free_of_charge_indicator = false,
                     code = c.Codigo,
-                    tax_totals = c.ImpuestoCargo?.Select(p => new Dtos.Factura.ImpuestoCargoDTO
+                    tax_totals = c.ImpuestoCargo?.Select(p => new ImpuestoCargoDTO
                     {
                         tax_id = p.IdTipoImpuesto,
                         tax_amount = p.ValorImpuesto,
@@ -452,7 +392,7 @@ namespace AtowerDocElectronico.Aplicacion.Services.Factura
                     type_item_identification_id = "4",
                     price_amount = c.ValorNeto
                 }).ToList(),
-                tax_totals = facturadto?.ImpuestoTotales?.Select(i => new Dtos.Factura.ImpuestoTotalDTO
+                tax_totals = facturadto?.ImpuestoTotales?.Select(i => new ImpuestoTotalDTO
                 {
                     tax_id = i.IdTipoImpuesto,
                     tax_amount = i.ValorImpuesto,
@@ -460,7 +400,7 @@ namespace AtowerDocElectronico.Aplicacion.Services.Factura
                     taxable_amount = i.ValorBaseImpuesto
                 }).ToList(),                
 
-                legal_monetary_totals = new Dtos.Factura.LegalMonetaryTotalsDTO
+                legal_monetary_totals = new LegalMonetaryTotalsDTO
                 {
                     line_extension_amount = facturadto?.TotalesNeto?.TotalCargos,
                     tax_exclusive_amount = taxExclusiveAmount != 0 ? facturadto?.TotalesNeto?.TotalCargos : 0,

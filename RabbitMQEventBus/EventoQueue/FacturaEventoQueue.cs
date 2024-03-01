@@ -11,12 +11,18 @@ namespace RabbitMQEventBus.EventoQueue
     public class FacturaEventoQueue:Evento
     {
         public FacturaNubex Factura { get; set; }
-        public int? IdCompañia { get; set; }
+        public FacturaAtowerDTO FacturaAtower { get; set; }
+        public int? IdCompañiaNubex { get; set; }
+        public int? IdCompañiaAtower { get; set; }
+        public string? Base64Pdf { get; set; } = null;
 
-        public FacturaEventoQueue(FacturaNubex factura, int? idCompañia)
+        public FacturaEventoQueue(FacturaNubex factura, FacturaAtowerDTO facturaAtower, int? idCompañiaNubex,string? base64Pdf,int? idCompañiaAtower)
         {
             Factura = factura;
-            IdCompañia = idCompañia;
+            FacturaAtower = facturaAtower;
+            IdCompañiaNubex = idCompañiaNubex;
+            Base64Pdf = base64Pdf;
+            IdCompañiaAtower = idCompañiaAtower;
         }
     }
 }

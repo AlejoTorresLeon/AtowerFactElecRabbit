@@ -5,7 +5,10 @@ using Dapper;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using RabbitMQEventBus.Dtos;
 using System.Data;
+using System.Net;
 using System.Text;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 
@@ -23,7 +26,7 @@ namespace AtowerEnvioNubex.Aplicacion.Services
             _configuration = configuration;
         }
 
-        public async Task<ResponseSimplificadoDian?> EnviarFacturaNubexDian(FacturaDian factura,int? IdCompañia)
+        public async Task<ResponseSimplificadoDian?> EnviarFacturaNubexDian(FacturaNubex factura,int? IdCompañia)
         {
             // Acceder a la conexión de base de datos a través de Entity Framework Core
             using IDbConnection dbConnection = _nubexDbContext.Database.GetDbConnection();
@@ -59,12 +62,61 @@ namespace AtowerEnvioNubex.Aplicacion.Services
                 return apiResponse2;
 
             }
+            
+
+            if (response.StatusCode == HttpStatusCode.UnprocessableEntity)
+            {
+                var responseBody2 = response.Content.ReadAsStringAsync().Result;
+                return BuildErrorResponse(response, responseBody2);
+            }
+
 
             return new ResponseSimplificadoDian
             {
                 Message = "Algo salio Mal"
             };
 
+        }
+
+
+        public static ResponseSimplificadoDian BuildErrorResponse(HttpResponseMessage response, string responseBody)
+        {
+            try
+            {
+                var errorResponse = JObject.Parse(responseBody);
+                var errorDetails = new Dictionary<string, List<string>>();
+
+                // Itera sobre las propiedades de error
+                foreach (var errorProperty in errorResponse["errors"])
+                {
+                    var propertyName = ((JProperty)errorProperty).Name;
+                    var errorMessages = errorProperty.First.Select(token => token.ToString()).ToList();
+                    errorDetails.Add(propertyName, errorMessages);
+                }
+
+                // Construye el mensaje de error
+                var errorMessage = "Validation error: ";
+                foreach (var (fieldName, errors) in errorDetails)
+                {
+                    errorMessage += $"{fieldName}: {string.Join(", ", errors)}; ";
+                }
+
+                // Construye el objeto de respuesta con el mensaje de error
+                var errorResult = new ResponseSimplificadoDian
+                {
+                    Message = errorMessage.TrimEnd(' ', ';') // Eliminar el último ";"
+                };
+
+                return errorResult;
+            }
+            catch (JsonException)
+            {
+                // Si la respuesta no puede ser deserializada como un error, se devuelve un objeto genérico.
+                return new ResponseSimplificadoDian
+                {
+                    Message = "Unexpected error"
+                };
+            }
         }
 
     }

@@ -7,6 +7,8 @@ namespace AtowerDocElectronico.Aplicacion.Interfaces
     {
         Task<TokenResponse?> GetUsuario(LoginDTOs usuarioDto);
         string? GetTokenIdUsuario(string token);
+        //string GenerateSalt();
+        //string GeneratePasswordHash(string password, byte[] salt);
         Task<Usuarios?> CreateUser(CrearUsuario usuarioNew);
     }
 }

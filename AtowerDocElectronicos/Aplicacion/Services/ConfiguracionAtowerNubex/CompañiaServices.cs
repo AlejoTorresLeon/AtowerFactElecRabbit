@@ -1,11 +1,16 @@
-﻿using AtowerDocElectronico.Aplicacion.Dtos.ConfiguracionAtowerNubex;
+﻿using AtowerDocElectronico.Aplicacion.Dtos.Autenticacion;
+using AtowerDocElectronico.Aplicacion.Dtos.ConfiguracionAtowerNubex;
+using AtowerDocElectronico.Aplicacion.Dtos.Maestros_Parametros;
 using AtowerDocElectronico.Aplicacion.Interfaces;
+using AtowerDocElectronico.Aplicacion.Services.Autenticacion;
 using AtowerDocElectronico.Aplicacion.Validations;
 using AtowerDocElectronico.Infraestructura.Entities;
 using AtowerDocElectronico.Infraestructura.Interfaces;
+using Dapper;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
+using System.Data;
 using System.Net;
 using System.Text;
 using static System.Runtime.InteropServices.JavaScript.JSType;
@@ -17,11 +22,15 @@ namespace AtowerDocElectronico.Aplicacion.Services.ConfiguracionAtowerNubex
         private readonly IEnviarHttp _enviarHttp;
         private readonly IConfiguration _configuration;
         private readonly IAtowerDbContext _atowerDbContext;
-        public CompañiaServices(IEnviarHttp enviarHttp,IConfiguration configuration, IAtowerDbContext atowerDbContext)
+        private readonly ILogin _login;
+        private readonly INubexDbContext _nubexDbContext;
+        public CompañiaServices(IEnviarHttp enviarHttp,IConfiguration configuration, IAtowerDbContext atowerDbContext, ILogin login, INubexDbContext nubexDbContext)
         {
             _enviarHttp = enviarHttp;
             _configuration = configuration;
             _atowerDbContext = atowerDbContext;
+            _login = login;
+            _nubexDbContext = nubexDbContext;
         }
 
         public async Task<ResponseGenericDtos?> CrearCompañia(CompañiaPostDto compani,int idUsuario)
@@ -38,6 +47,14 @@ namespace AtowerDocElectronico.Aplicacion.Services.ConfiguracionAtowerNubex
                     result.Success = false;
                     return result;
                 }
+                // Acceder a la conexión de base de datos a través de Entity Framework Core
+                using IDbConnection dbConnection = _nubexDbContext.Database.GetDbConnection();
+
+                // Construir la consulta SQL base
+                var sql = "SELECT email FROM users where email = @Email";
+                var email = await dbConnection.QueryFirstOrDefaultAsync(sql , new { Email = compani .Correo});
+
+                var email2 = await _atowerDbContext.Compañias.FirstOrDefaultAsync(c => c.Email == compani.Correo);
 
                 var compañia = await _atowerDbContext.Compañias.FirstOrDefaultAsync(c => c.Identificacion == compani.Identificacion.ToString());
 
@@ -47,9 +64,16 @@ namespace AtowerDocElectronico.Aplicacion.Services.ConfiguracionAtowerNubex
                     result.Success = false;
                     return result;
                 }
+                if (email != null || email2 != null)
+                {
+                    result.Message = ("Este Email ya ah sido utilizado.");
+                    result.Success = false;
+                    return result;
+                }
 
                 var url = $"{_configuration["NubexApi"]}/api/ubl2.1/config/{compani.Identificacion}/{compani.DigitoVerificacion}";
                 var transformedData = TrandormacionCrearCompany(compani);
+                Console.WriteLine(transformedData);
                 var content = new StringContent(JsonConvert.SerializeObject(transformedData), Encoding.UTF8, "application/json");
             
                 var response = await _enviarHttp.SendAsync(url, HttpMethod.Post, content);
@@ -58,7 +82,19 @@ namespace AtowerDocElectronico.Aplicacion.Services.ConfiguracionAtowerNubex
                 {
                     var responseBody = await response.Content.ReadAsStringAsync();
                     var data = BuildSuccessResponseCrearCompany(responseBody);
-                    var crearCompañiaAtower = await CrearCompañiaAtower(compani,data,idUsuario);
+
+
+                    var userClient = await CrearUsuarioCliente(compani);
+
+                    if (userClient == null)
+                    {
+                        result.Message =  "Error al crear usuario cliente en Atower.";
+                        result.Success = false;
+                        return result;
+                    }
+
+                    var crearCompañiaAtower = await CrearCompañiaAtower(compani,data,idUsuario,userClient.Id);
+
 
                     if (crearCompañiaAtower.Success == true)
                     {
@@ -100,7 +136,7 @@ namespace AtowerDocElectronico.Aplicacion.Services.ConfiguracionAtowerNubex
             return result;
         }
 
-        private async Task<ResponseGenericDtos> CrearCompañiaAtower(CompañiaPostDto compani, CompanyResponseDTOs? nubex,int idUsuario)
+        private async Task<ResponseGenericDtos> CrearCompañiaAtower(CompañiaPostDto compani, CompanyResponseDTOs? nubex,int idUsuario,int idUsuarioCliente)
         {
             var result = new ResponseGenericDtos();
             result.Errors = new List<string>();
@@ -124,7 +160,8 @@ namespace AtowerDocElectronico.Aplicacion.Services.ConfiguracionAtowerNubex
                     TokenNubex = nubex?.token ?? "",
                     Habilitado = true,
                     Bloqueo = false,
-                    IdUsuarioCreador = idUsuario
+                    IdUsuarioCreador = idUsuario,
+                    IdUsuarioCliente = idUsuarioCliente
                 };
 
                 _atowerDbContext.Compañias.Add(nuevaCompañia);
@@ -135,16 +172,36 @@ namespace AtowerDocElectronico.Aplicacion.Services.ConfiguracionAtowerNubex
                 result.Message = "Compañia creada con exito";
                 return result;
             }
-            catch
+            catch (Exception ex)
             {
+                Console.WriteLine(ex.Message);
                 result.Message = "Ocurrio un error al guardar en Atower";
                 result.Success = false;
+                result.Data = ex.Message;
                 return result;
             }
          
 
         }
 
+        private async Task<Usuarios?> CrearUsuarioCliente (CompañiaPostDto compani)
+        {
+            //var saltBytes = _login.GenerateSalt();
+            //string passwordHash = _login.GeneratePasswordHash(compani.Identificacion.ToString(), Convert.FromBase64String(saltBytes));
+
+            var userClienteNew = new CrearUsuario
+            {
+                Identificacion = (ulong)compani.Identificacion,
+                Nombre = compani.NombreEmpresa,
+                Email = compani.Correo,
+                IdRol = 4,
+                Password = compani.Identificacion.ToString()
+
+            };
+            var usercliente = await _login.CreateUser(userClienteNew);
+
+            return usercliente;
+        }
 
         private object TrandormacionCrearCompany(CompañiaPostDto companyCreationDto)
         {
@@ -236,7 +293,7 @@ namespace AtowerDocElectronico.Aplicacion.Services.ConfiguracionAtowerNubex
                 var errorResponse = JsonConvert.DeserializeObject<ApiErrorResponse>(responseBody);
                 return new ErrorResponseDtos
                 {
-                    Error = "Validation error",
+                    Error = $"Validation error. {errorResponse.Message}",
                     Details = errorResponse?.Errors?.SelectMany(kv => kv.Value).ToList()
                 };
             }
